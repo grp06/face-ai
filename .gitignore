@@ -1,0 +1,19 @@
+*.mp4
+*.mp3
+*.avi
+config.yaml
+.env
+.env.yml
+graphql-ec2-key-pair.pem
+.DS_Store
+node_modules
+.webpack
+.serverless
+info.log
+dist
+yarn-error.log
+
+# IDEs
+.vscode/settings.json
+.idea
+
