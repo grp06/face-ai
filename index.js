@@ -42,15 +42,10 @@ const loadVideoAndGenerateClips = (videoPath, rekognitionPath, transcriptPath) =
         }
       })
       speakerStartTimes =  speakerStartObjs.map(item => item.startTime)
-      console.log("🚀 ~ fs.readFile ~ speakerStartTimes", speakerStartTimes)
       return speakerStartTimes
     })
   }
   getSpeakerStartTimes(transcriptPath)
-  
-  setTimeout(() => {
-    // console.log('speakerStartTimes = ', speakerStartTimes);
-  }, 100);
   
   const onlyNecessaryData = (person) => {
     return person.map(obj => {
@@ -64,7 +59,7 @@ const loadVideoAndGenerateClips = (videoPath, rekognitionPath, transcriptPath) =
   
   const person1Filtered = onlyNecessaryData(personOnTheRight)
   
-  const getAnyMajorEmotionChanges = (rekognitionData) => {
+  const getAnyMajorEmotionChanges = (rekognitionData, emotion1, emotion2) => {
     const timestampsThatMetThreshold = []
     let counter1 = 0
     let counter2 = 0
@@ -79,27 +74,51 @@ const loadVideoAndGenerateClips = (videoPath, rekognitionPath, transcriptPath) =
       const meetsEmotion1Threshold = counter1 >= emotion1Threshold
       const meetsEmotion2Threshold = counter2 >= emotion2Threshold
     
-      // start counting, going to look out for the same emotion in consecutive frames
-      if (counter1 === 0) {
+      // current emotion needs to be calm for 5 frames in a row
+      // new emotion needs to be happy
+      
+      let consecutiveCalmFrames = 0;
+      const isEmotion1 = currentEmotion === emotion1
+      const isEmotion2 = currentEmotion === emotion2
+      const previousEmotionMatched = previousEmotion === emotion1
+
+      if (counter1 === 0 && isEmotion1) {
         counter1 += 1
-        // if this frame is the same as the last frame (and we haven't detected a recent change in emotion)
-      } else if (emotionHasntChanged && counter2 === 0) {
+      } else if (isEmotion1 && previousEmotionMatched && counter2 === 0) {
         counter1 += 1
-        // the emotion has changed. Start counting up on the newly changed emotion
-      } else if (emotionChanged && counter2 === 0) {
+      } else if (isEmotion2 && previousEmotionMatched && counter2 === 0) {
         counter2 += 1
-        // continue counting on the newly changed emotion
-      } else if (emotionHasntChanged && counter2 > 0) {
+      } else if (isEmotion2 && previousEmotion === emotion2 && counter2 !== 0) {
         counter2 += 1
-        // we've had 10 of one emotion and changed to 10 of a new emotion. Count this
         if (meetsEmotion1Threshold && meetsEmotion2Threshold) {
           timestampsThatMetThreshold.push((rekognitionData[index - emotion2Threshold].timestamp))
         }
-        // we were counting on the new emotion but it just changed back. RESET
       } else if (emotionChanged && counter2 > 0) {
         counter1 = 0
         counter2 = 0
-      }
+      } 
+
+      // // start counting, going to look out for the same emotion in consecutive frames
+      // if (counter1 === 0) {
+      //   counter1 += 1
+      //   // if this frame is the same as the last frame (and we haven't detected a recent change in emotion)
+      // } else if (emotionHasntChanged && counter2 === 0) {
+      //   counter1 += 1
+      //   // the emotion has changed. Start counting up on the newly changed emotion
+      // } else if (emotionChanged && counter2 === 0) {
+      //   counter2 += 1
+      //   // continue counting on the newly changed emotion
+      // } else if (emotionHasntChanged && counter2 > 0) {
+      //   counter2 += 1
+      //   // we've had 10 of one emotion and changed to 10 of a new emotion. Count this
+      //   if (meetsEmotion1Threshold && meetsEmotion2Threshold) {
+      //     timestampsThatMetThreshold.push((rekognitionData[index - emotion2Threshold].timestamp))
+      //   }
+      //   // we were counting on the new emotion but it just changed back. RESET
+      // } else if (emotionChanged && counter2 > 0) {
+      //   counter1 = 0
+      //   counter2 = 0
+      // }
     })
     const removeIfInSameRange = (timestampArray) => {
       let currentStartStamp;
@@ -119,7 +138,7 @@ const loadVideoAndGenerateClips = (videoPath, rekognitionPath, transcriptPath) =
     })
   }
   
-  const majorEmotionalChanges = getAnyMajorEmotionChanges(person1Filtered)
+  const majorEmotionalChanges = getAnyMajorEmotionChanges(person1Filtered, 'CALM', 'HAPPY')
   
   const getClipStartTimes = () => {
     const clipStartTimes = []
